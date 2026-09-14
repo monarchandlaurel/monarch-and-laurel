@@ -19,9 +19,16 @@ const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ_MT3_NH
 /* ---------- Fetch + parse product data ---------- */
 
 async function fetchProducts() {
-  const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-  if (!res.ok) throw new Error("Could not load product sheet (" + res.status + ")");
-  const csvText = await res.text();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let csvText;
+  try {
+    const res = await fetch(SHEET_CSV_URL, { cache: "no-store", signal: controller.signal });
+    if (!res.ok) throw new Error("Could not load product sheet (" + res.status + ")");
+    csvText = await res.text();
+  } finally {
+    clearTimeout(timeout);
+  }
   const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
 
   return parsed.data
